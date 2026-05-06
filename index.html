@@ -6,6 +6,10 @@
     <title>InstaHD Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #fda4af; border-radius: 10px; }
+    </style>
 </head>
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
 
@@ -21,49 +25,19 @@
                 <input type="text" id="igUrl" placeholder="Dán link bài viết Instagram vào đây nà..." 
                     class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 focus:bg-white transition-all text-sm">
             </div>
-
-            <button onclick="analyzeLink()" id="analyzeBtn"
-                class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-900 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
-                <span>Gửi anh đọc</span>
-                <i class="fa-solid fa-microchip"></i>
+            <button onclick="analyzeLink()" id="analyzeBtn" class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-900 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
+                <span>Gửi anh đọc</span> <i class="fa-solid fa-microchip"></i>
             </button>
         </div>
 
         <div id="loading" class="mt-6 text-center hidden">
             <i class="fa-solid fa-circle-notch fa-spin text-rose-500 text-3xl"></i>
-            <p class="text-slate-500 mt-2 text-xs font-medium">Anh đang xử lí nha...</p>
+            <p class="text-slate-500 mt-2 text-xs font-medium">Anh đang bóc tách album nha...</p>
         </div>
 
-        <!-- Bảng điều khiển hiện ra sau khi phân tích xong -->
-        <div id="controlPanel" class="mt-6 hidden border-t border-slate-100 pt-6">
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Em chọn chất lượng đi</label>
-                <div class="relative">
-                    <select id="qualitySelect" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 font-medium text-sm appearance-none cursor-pointer">
-                        <option value="hd">💎 Bản gốc HD (Tốt nhất cho In ấn & Thiết kế)</option>
-                        <option value="sd">⚡ Bản tiêu chuẩn (Tối ưu cho Web & Social)</option>
-                    </select>
-                    <i class="fa-solid fa-chevron-down absolute right-4 top-4 text-slate-400 text-xs"></i>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="previewImage()" class="bg-rose-50 text-rose-600 font-bold py-3 rounded-xl hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 text-sm border border-rose-100">
-                    <i class="fa-regular fa-eye"></i> Xem trước
-                </button>
-                <button onclick="downloadImage()" id="downloadBtn" class="bg-rose-500 text-white font-bold py-3 rounded-xl hover:bg-rose-600 shadow-md shadow-rose-200 transition-all flex items-center justify-center gap-2 text-sm">
-                    <i class="fa-solid fa-download"></i> Tải về máy
-                </button>
-            </div>
-        </div>
-
-        <!-- Khu vực hiển thị ảnh xem trước -->
-        <div id="previewArea" class="mt-6 hidden">
-            <div class="relative w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-slate-100 p-1">
-                <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] uppercase tracking-wider px-2 py-1 rounded font-bold z-10">
-                    Chế độ xem trước
-                </div>
-                <img id="previewImgElement" src="" class="w-full h-auto rounded-lg object-cover">
+        <div id="albumArea" class="mt-6 hidden border-t border-slate-100 pt-6">
+            <div id="photoGrid" class="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scroll">
+                <!-- Danh sách ảnh sẽ hiện ở đây -->
             </div>
         </div>
         
@@ -71,28 +45,19 @@
     </div>
 
     <script>
-        let currentRawUrl = '';
-        // Link máy chủ Render của bạn
-        const BASE_URL = 'https://taianhchobe.onrender.com';
+        const BASE_URL = 'http://localhost:3000';
 
         async function analyzeLink() {
             const urlInput = document.getElementById('igUrl').value;
             const btn = document.getElementById('analyzeBtn');
             const loading = document.getElementById('loading');
-            const controlPanel = document.getElementById('controlPanel');
-            const previewArea = document.getElementById('previewArea');
+            const albumArea = document.getElementById('albumArea');
+            const photoGrid = document.getElementById('photoGrid');
             const errorMsg = document.getElementById('errorMessage');
 
-            controlPanel.classList.add('hidden');
-            previewArea.classList.add('hidden');
+            albumArea.classList.add('hidden');
             errorMsg.classList.add('hidden');
-
-            if(!urlInput.includes('instagram.com')) {
-                errorMsg.innerText = 'Vui lòng dán đúng link bài viết Instagram!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
+            photoGrid.innerHTML = '';
             btn.disabled = true;
             loading.classList.remove('hidden');
 
@@ -105,15 +70,29 @@
 
                 const data = await response.json();
 
-                if(data.success) {
-                    currentRawUrl = data.hd_url;
-                    controlPanel.classList.remove('hidden');
+                if(data.success && data.images) {
+                    data.images.forEach((imgUrl, index) => {
+                        const proxyUrl = `${BASE_URL}/api/proxy?url=` + encodeURIComponent(imgUrl);
+                        const card = document.createElement('div');
+                        card.className = "bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-3";
+                        card.innerHTML = `
+                            <div class="relative aspect-square rounded-xl overflow-hidden shadow-sm">
+                                <div class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded font-bold z-10">ẢNH #${index + 1}</div>
+                                <img src="${proxyUrl}" class="w-full h-full object-cover">
+                            </div>
+                            <button onclick="downloadImage('${imgUrl}', ${index + 1}, this)" class="w-full bg-rose-500 text-white font-bold py-2.5 rounded-xl hover:bg-rose-600 transition-all text-sm shadow-md">
+                                <i class="fa-solid fa-download"></i> Tải tấm này về máy
+                            </button>
+                        `;
+                        photoGrid.appendChild(card);
+                    });
+                    albumArea.classList.remove('hidden');
                 } else {
-                    errorMsg.innerText = data.error;
+                    errorMsg.innerText = data.error || 'Lỗi không xác định';
                     errorMsg.classList.remove('hidden');
                 }
             } catch (err) {
-                errorMsg.innerText = 'Lỗi kết nối máy chủ Cloud!';
+                errorMsg.innerText = 'Server VS Code chưa bật nha Anh Thư ơi!';
                 errorMsg.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
@@ -121,49 +100,23 @@
             }
         }
 
-        function getProxyUrl() {
-            return `${BASE_URL}/api/proxy?url=` + encodeURIComponent(currentRawUrl);
-        }
-
-        function previewImage() {
-            const previewArea = document.getElementById('previewArea');
-            const imgElement = document.getElementById('previewImgElement');
-            
-            imgElement.src = getProxyUrl();
-            previewArea.classList.remove('hidden');
-        }
-
-        async function downloadImage() {
-            const btn = document.getElementById('downloadBtn');
-            const quality = document.getElementById('qualitySelect').value;
-            const proxyUrl = getProxyUrl();
-            
+        async function downloadImage(rawUrl, index, btn) {
+            const proxyUrl = `${BASE_URL}/api/proxy?url=` + encodeURIComponent(rawUrl);
+            const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
-            btn.classList.add('opacity-70');
+            btn.disabled = true;
 
             try {
                 const response = await fetch(proxyUrl);
                 const blob = await response.blob();
-                
-                const downloadUrl = window.URL.createObjectURL(blob);
+                const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = downloadUrl;
-                
-                const timeStamp = new Date().getTime();
-                a.download = `InstaHD_${quality.toUpperCase()}_${timeStamp}.jpg`;
-                
-                document.body.appendChild(a);
+                a.href = url;
+                a.download = `InstaHD_AnhThu_${index}_${Date.now()}.jpg`;
                 a.click();
-                
-                window.URL.revokeObjectURL(downloadUrl);
-                document.body.removeChild(a);
-            } catch (error) {
-                alert('Có lỗi khi tải file xuống!');
-            } finally {
-                btn.innerHTML = '<i class="fa-solid fa-download"></i> Tải về máy';
-                btn.classList.remove('opacity-70');
-            }
+                window.URL.revokeObjectURL(url);
+            } catch (error) { alert('Lỗi tải ảnh!'); }
+            finally { btn.innerHTML = originalText; btn.disabled = false; }
         }
     </script>
 </body>
