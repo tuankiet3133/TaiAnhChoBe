@@ -12,32 +12,32 @@
     <div class="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full border border-slate-100">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Insta<span class="text-rose-500">HD</span></h1>
-            <p class="text-slate-500 text-sm font-medium">Công cụ hỗ trợ tải ảnh chất lượng cao 💖</p>
+            <p class="text-slate-500 text-sm font-medium">Công cụ anh viết cho bé yêu 💖</p>
         </div>
 
         <div class="space-y-4">
             <div class="relative">
                 <i class="fa-brands fa-instagram absolute left-4 top-3.5 text-slate-400 text-xl"></i>
-                <input type="text" id="igUrl" placeholder="Dán link bài viết Instagram vào đây..." 
+                <input type="text" id="igUrl" placeholder="Dán link bài viết Instagram vào đây nà..." 
                     class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 focus:bg-white transition-all text-sm">
             </div>
 
             <button onclick="analyzeLink()" id="analyzeBtn"
                 class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-900 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
-                <span>Phân Tích Dữ Liệu</span>
+                <span>Gửi anh đọc</span>
                 <i class="fa-solid fa-microchip"></i>
             </button>
         </div>
 
         <div id="loading" class="mt-6 text-center hidden">
             <i class="fa-solid fa-circle-notch fa-spin text-rose-500 text-3xl"></i>
-            <p class="text-slate-500 mt-2 text-xs font-medium">Đang trích xuất ảnh gốc từ hệ thống...</p>
+            <p class="text-slate-500 mt-2 text-xs font-medium">Anh đang xử lí nha...</p>
         </div>
 
         <!-- Bảng điều khiển hiện ra sau khi phân tích xong -->
         <div id="controlPanel" class="mt-6 hidden border-t border-slate-100 pt-6">
             <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chọn chất lượng</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Em chọn chất lượng đi</label>
                 <div class="relative">
                     <select id="qualitySelect" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 font-medium text-sm appearance-none cursor-pointer">
                         <option value="hd">💎 Bản gốc HD (Tốt nhất cho In ấn & Thiết kế)</option>
@@ -57,7 +57,7 @@
             </div>
         </div>
 
-        <!-- Khu vực hiển thị ảnh xem trước (Đã fix lỗi vỡ ảnh) -->
+        <!-- Khu vực hiển thị ảnh xem trước -->
         <div id="previewArea" class="mt-6 hidden">
             <div class="relative w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-slate-100 p-1">
                 <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] uppercase tracking-wider px-2 py-1 rounded font-bold z-10">
@@ -72,6 +72,8 @@
 
     <script>
         let currentRawUrl = '';
+        // Link máy chủ Render của bạn
+        const BASE_URL = 'https://taianhchobe.onrender.com';
 
         async function analyzeLink() {
             const urlInput = document.getElementById('igUrl').value;
@@ -95,7 +97,7 @@
             loading.classList.remove('hidden');
 
             try {
-                const response = await fetch('http://localhost:3000/api/download', {
+                const response = await fetch(`${BASE_URL}/api/download`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: urlInput })
@@ -111,7 +113,7 @@
                     errorMsg.classList.remove('hidden');
                 }
             } catch (err) {
-                errorMsg.innerText = 'Lỗi kết nối máy chủ!';
+                errorMsg.innerText = 'Lỗi kết nối máy chủ Cloud!';
                 errorMsg.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
@@ -119,9 +121,8 @@
             }
         }
 
-        // Gọi qua Proxy tàng hình để tránh bị Instagram chặn
         function getProxyUrl() {
-            return 'http://localhost:3000/api/proxy?url=' + encodeURIComponent(currentRawUrl);
+            return `${BASE_URL}/api/proxy?url=` + encodeURIComponent(currentRawUrl);
         }
 
         function previewImage() {
@@ -141,11 +142,9 @@
             btn.classList.add('opacity-70');
 
             try {
-                // Tải ảnh về qua proxy dạng file ngầm
                 const response = await fetch(proxyUrl);
                 const blob = await response.blob();
                 
-                // Ép trình duyệt lưu file thay vì mở tab mới
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
