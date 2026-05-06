@@ -3,9 +3,17 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
 
-app.use(cors());
+// 1. SỬA LỖI PORT: Render yêu cầu dùng process.env.PORT
+const PORT = process.env.PORT || 3000;
+
+// 2. CẬP NHẬT CORS: Cho phép mọi nguồn truy cập để tránh lỗi kết nối từ GitHub/Netlify
+app.use(cors({
+    origin: '*', 
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Hàm tự động cắt mã bài viết từ link Instagram
@@ -38,7 +46,7 @@ app.post('/api/download', async (req, res) => {
             url: 'https://instagram-scraper-stable-api.p.rapidapi.com/get_media_data_v2.php',
             params: { media_code: mediaCode },
             headers: {
-                'X-RapidAPI-Key': '53783b1327mshc5163a4f0e02be4p147252jsn653c7a6a1cbd', // Key gốc của bạn
+                'X-RapidAPI-Key': '53783b1327mshc5163a4f0e02be4p147252jsn653c7a6a1cbd',
                 'X-RapidAPI-Host': 'instagram-scraper-stable-api.p.rapidapi.com'
             }
         };
@@ -58,7 +66,6 @@ app.post('/api/download', async (req, res) => {
     }
 });
 
-// TÍNH NĂNG MỚI: ĐƯỜNG HẦM VƯỢT RÀO (Chống vỡ ảnh & Hỗ trợ tải thẳng về máy)
 app.get('/api/proxy', async (req, res) => {
     try {
         const imageUrl = req.query.url;
@@ -81,6 +88,11 @@ app.get('/api/proxy', async (req, res) => {
     }
 });
 
+// Trang chủ để kiểm tra server có sống không
+app.get('/', (req, res) => {
+    res.send('🚀 Instagram Proxy Server is Running!');
+});
+
 app.listen(PORT, () => {
-    console.log(`🚀 Server đang chạy ngon lành tại http://localhost:${PORT}`);
+    console.log(`🚀 Server đang chạy ngon lành tại cổng ${PORT}`);
 });
